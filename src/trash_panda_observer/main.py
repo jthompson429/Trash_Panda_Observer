@@ -25,6 +25,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument(
+        "--log-level",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--capture-test", action="store_true")
     parser.add_argument("--observe", action="store_true")
@@ -37,7 +41,7 @@ def main() -> int:
     args = parse_args()
     config = load_config(args.config)
     camera_cfg, motion_cfg = config["camera"], config["motion"]
-    configure_logging(config["logging"])
+    configure_logging(config["logging"], args.log_level)
     log = logging.getLogger("trash_panda_observer")
     log.info("System summary %s", system_summary())
     log.info("Storage summary %s", storage_summary(Path(config["storage"]["base_path"])))
