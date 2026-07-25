@@ -11,6 +11,7 @@ from pathlib import Path
 from libcamera import controls
 from picamera2 import Picamera2
 
+from . import __version__
 from .capture import capture_burst
 from .config import load_config
 from .coordinator import EventCoordinator
@@ -22,6 +23,7 @@ from .storage import LowStorageError
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--capture-test", action="store_true")
