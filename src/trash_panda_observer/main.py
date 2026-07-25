@@ -17,6 +17,7 @@ from .coordinator import EventCoordinator
 from .logging_setup import configure_logging
 from .motion import MotionDetector
 from .system_info import storage_summary, system_summary
+from .storage import LowStorageError
 
 
 def parse_args() -> argparse.Namespace:
@@ -141,6 +142,8 @@ def main() -> int:
                     camera, config, warmup_seconds=0, manage_camera=False
                 )
                 log.info("Captured event path=%s trigger=%s", path, event)
+            except LowStorageError:
+                log.error("Capture suppressed: storage below safe threshold")
             except Exception:
                 log.exception("Capture worker failed")
                 worker_errors.put(RuntimeError("capture worker failed"))
