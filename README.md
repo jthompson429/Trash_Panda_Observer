@@ -10,6 +10,8 @@ later manual review. It does not classify animals or actuate hardware.
 git clone https://github.com/jthompson429/Trash_Panda_Observer.git
 cd Trash_Panda_Observer
 ./scripts/install.sh
+# To also install or update the unit without starting it:
+./scripts/install.sh --install-service
 ```
 
 Review the ignored `config/observer.yaml`, verify the camera, then test:
@@ -36,6 +38,8 @@ journalctl -u trash-panda-observer -f
 ```
 
 Application logs rotate under `/home/pi/trash-panda-observer-data/logs`.
+Run `./scripts/health_check.sh` for service, disk, event, temporary-file, and
+recent-log status.
 
 ## Configuration
 
