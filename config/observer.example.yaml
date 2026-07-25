@@ -27,6 +27,11 @@ capture:
 storage:
   base_path: /home/pi/trash-panda-observer-data
   minimum_free_space_gb: 5
+  retention_enabled: false
+  retention_days: 0
+
+environment:
+  lighting_mode: unknown
 
 logging:
   level: INFO
