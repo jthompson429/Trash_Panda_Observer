@@ -14,7 +14,9 @@ python3 -m venv --system-site-packages "$project_dir/.venv"
 if [ ! -f "$project_dir/config/observer.yaml" ]; then
   cp "$project_dir/config/observer.example.yaml" "$project_dir/config/observer.yaml"
 fi
+chmod 0640 "$project_dir/config/observer.yaml"
 install -d -o pi -g pi -m 0750 \
+  /home/pi/trash-panda-observer-data \
   /home/pi/trash-panda-observer-data/captures \
   /home/pi/trash-panda-observer-data/logs \
   /home/pi/trash-panda-observer-data/state
