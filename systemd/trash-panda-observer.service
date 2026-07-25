@@ -1,0 +1,17 @@
+[Unit]
+Description=Trash Panda Observer
+After=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/Trash_Panda_Observer
+ExecStart=/home/pi/Trash_Panda_Observer/scripts/run_observer.sh --observe
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=45
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
