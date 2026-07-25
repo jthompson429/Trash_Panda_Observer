@@ -3,6 +3,7 @@
 import argparse
 import logging
 import signal
+import threading
 import time
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from libcamera import controls
 from picamera2 import Picamera2
 
 from .capture import capture_burst
+from .coordinator import EventCoordinator
 from .motion import MotionDetector
 
 
@@ -19,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--capture-test", action="store_true")
+    parser.add_argument("--observe", action="store_true")
     parser.add_argument("--motion-debug", action="store_true")
     parser.add_argument("--max-runtime-minutes", type=float)
     return parser.parse_args()
@@ -78,8 +81,8 @@ def main() -> int:
         camera.close()
         print(event_dir)
         return 0
-    if not args.dry_run:
-        raise SystemExit("Specify --dry-run or --capture-test")
+    if not (args.dry_run or args.observe):
+        raise SystemExit("Specify --dry-run, --observe, or --capture-test")
     started = time.monotonic()
     warmup_until = started + motion_cfg["warmup_seconds"]
     debug_interval = config.get("logging", {}).get(
@@ -88,6 +91,32 @@ def main() -> int:
     next_debug = started
     log.info("Starting dry-run motion analysis at %s FPS", fps)
     camera.start()
+    coordinator = EventCoordinator(
+        config["capture"]["maximum_pending_events"],
+        motion_cfg["cooldown_seconds"],
+    )
+    worker_stop = threading.Event()
+
+    def capture_worker() -> None:
+        while not worker_stop.is_set() or not coordinator.events.empty():
+            try:
+                event = coordinator.begin()
+            except Exception:
+                time.sleep(0.05)
+                continue
+            try:
+                path = capture_burst(
+                    camera, config, warmup_seconds=0, manage_camera=False
+                )
+                log.info("Captured event path=%s trigger=%s", path, event)
+            except Exception:
+                log.exception("Capture worker failed")
+            finally:
+                coordinator.complete()
+
+    worker = threading.Thread(target=capture_worker, name="capture-worker")
+    if args.observe:
+        worker.start()
     try:
         while not stop:
             now = time.monotonic()
@@ -102,11 +131,17 @@ def main() -> int:
             if now < warmup_until:
                 detector.reset_streak()
             elif result.triggered:
-                log.info(
-                    "DRY-RUN trigger total_area=%d largest_area=%.0f",
-                    result.total_area,
-                    result.largest_area,
-                )
+                if args.dry_run:
+                    log.info(
+                        "DRY-RUN trigger total_area=%d largest_area=%.0f",
+                        result.total_area, result.largest_area,
+                    )
+                else:
+                    reason = coordinator.submit({
+                        "total_area": result.total_area,
+                        "largest_area": result.largest_area,
+                    })
+                    log.info("Trigger admission=%s", reason)
             if args.motion_debug and now >= next_debug:
                 log.info(
                     "motion total_area=%d largest_area=%.0f qualifying=%s warmup=%s",
@@ -117,6 +152,9 @@ def main() -> int:
                 )
                 next_debug = now + debug_interval
     finally:
+        worker_stop.set()
+        if args.observe:
+            worker.join(timeout=30)
         camera.stop()
         camera.close()
         log.info("Motion analysis stopped cleanly")
