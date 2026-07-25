@@ -1,6 +1,8 @@
 """High-resolution event burst capture."""
 
 import os
+import platform
+import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -16,11 +18,44 @@ def capture_burst(
     require_free_space(base, storage["minimum_free_space_gb"])
     now = datetime.now().astimezone()
     identifier, event_dir = create_event_directory(base, now)
+    free_before = shutil.disk_usage(base).free
+    camera_cfg = config["camera"]
     metadata = {
         "schema_version": 1,
         "event_id": identifier,
         "status": "incomplete",
         "trigger_timestamp": now.isoformat(timespec="milliseconds"),
+        "capture_start_timestamp": datetime.now().astimezone().isoformat(
+            timespec="milliseconds"),
+        "hostname": platform.node(),
+        "platform": {
+            "model": Path("/proc/device-tree/model").read_text().rstrip("\0")
+            if Path("/proc/device-tree/model").exists() else "unknown",
+            "os": platform.platform(),
+            "architecture": platform.machine(),
+        },
+        "camera": {
+            "capture_width": camera_cfg["capture_width"],
+            "capture_height": camera_cfg["capture_height"],
+            "analysis_width": camera_cfg["analysis_width"],
+            "analysis_height": camera_cfg["analysis_height"],
+            "jpeg_quality": capture["jpeg_quality"],
+            "autofocus_mode": camera_cfg["autofocus_mode"],
+        },
+        "motion": {
+            "pixel_threshold": config["motion"]["pixel_threshold"],
+            "minimum_total_area": config["motion"]["minimum_total_area"],
+            "minimum_largest_region_area":
+                config["motion"]["minimum_largest_region_area"],
+            "consecutive_frames": config["motion"]["consecutive_frames"],
+            "cooldown_seconds": config["motion"]["cooldown_seconds"],
+        },
+        "storage": {"free_bytes_before": free_before},
+        "software": {"name": "Trash Panda Observer", "version": "0.1.0"},
+        "environment": {
+            "lighting_mode": config.get("environment", {}).get(
+                "lighting_mode", "unknown")
+        },
         "capture": {"frames_requested": capture["frames_per_event"],
                     "frames_saved": 0, "interval_ms": capture["interval_ms"]},
         "frames": [], "errors": [],
@@ -60,5 +95,6 @@ def capture_burst(
             camera.stop()
         metadata["capture_end_timestamp"] = datetime.now().astimezone().isoformat(
             timespec="milliseconds")
+        metadata["storage"]["free_bytes_after"] = shutil.disk_usage(base).free
         atomic_json(event_dir / "event.json", metadata)
     return event_dir

@@ -34,6 +34,9 @@ def load_config(path: Path) -> dict:
             raise ValueError("motion.region_of_interest must fit within the frame")
     if value["storage"].get("minimum_free_space_gb", -1) < 0:
         raise ValueError("storage.minimum_free_space_gb cannot be negative")
+    if value["storage"].get("retention_enabled") and \
+            value["storage"].get("retention_days", 0) <= 0:
+        raise ValueError("enabled retention requires positive retention_days")
     system = value["system"]
     if system.get("camera_retry_count", 0) < 1:
         raise ValueError("system.camera_retry_count must be positive")
