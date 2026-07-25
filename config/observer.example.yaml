@@ -1,0 +1,22 @@
+camera:
+  analysis_width: 640
+  analysis_height: 480
+  capture_width: 2304
+  capture_height: 1296
+  analysis_fps: 12
+  autofocus_mode: continuous
+
+motion:
+  pixel_threshold: 25
+  minimum_total_area: 1500
+  minimum_largest_region_area: 750
+  consecutive_frames: 2
+  warmup_seconds: 10
+  blur_kernel_size: 5
+  morphology_kernel_size: 3
+  background_alpha: 0.02
+  region_of_interest: null
+
+logging:
+  level: INFO
+  motion_debug_interval_seconds: 5
