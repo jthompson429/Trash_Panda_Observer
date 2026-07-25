@@ -15,6 +15,19 @@ def test_rotating_log_is_created(tmp_path):
     assert "hello" in path.read_text()
 
 
+def test_rotating_log_keeps_bounded_backups(tmp_path):
+    path = tmp_path / "logs/observer.log"
+    configure_logging({"level": "INFO", "log_to_file": True,
+                       "log_path": str(path), "maximum_log_size_mb": 0.001,
+                       "backup_count": 2})
+    logger = logging.getLogger("rotation-test")
+    for index in range(200):
+        logger.info("message %03d %s", index, "x" * 100)
+    assert path.exists()
+    assert (path.parent / "observer.log.1").exists()
+    assert len(list(path.parent.glob("observer.log.*"))) <= 2
+
+
 def test_summaries_are_serializable(tmp_path):
     assert system_summary()["python"]
     assert storage_summary(tmp_path)["free"] > 0
