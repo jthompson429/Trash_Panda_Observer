@@ -103,7 +103,8 @@ def main() -> int:
         "motion_debug_interval_seconds", 5
     )
     next_debug = started
-    log.info("Starting dry-run motion analysis at %s FPS", fps)
+    mode = "observation" if args.observe else "dry-run"
+    log.info("Starting %s motion analysis at %s FPS", mode, fps)
     camera.start()
     coordinator = EventCoordinator(
         config["capture"]["maximum_pending_events"],
