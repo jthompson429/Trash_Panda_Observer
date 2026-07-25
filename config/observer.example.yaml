@@ -30,4 +30,13 @@ storage:
 
 logging:
   level: INFO
+  log_to_file: true
+  log_path: /home/pi/trash-panda-observer-data/logs/observer.log
+  maximum_log_size_mb: 10
+  backup_count: 5
   motion_debug_interval_seconds: 5
+
+system:
+  camera_retry_count: 3
+  camera_retry_delay_seconds: 10
+  low_storage_recheck_seconds: 300
