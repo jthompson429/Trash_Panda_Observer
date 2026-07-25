@@ -19,6 +19,19 @@ def load_config(path: Path) -> dict:
             raise ValueError(f"camera.{key} must be a positive integer")
     if camera.get("autofocus_mode") not in {"continuous", "auto", "manual"}:
         raise ValueError("unsupported autofocus mode")
+    if camera.get("autofocus_mode") == "manual" and \
+            not isinstance(camera.get("manual_lens_position"), (int, float)):
+        raise ValueError("manual autofocus requires manual_lens_position")
+    for key in ("exposure_time_us", "analogue_gain"):
+        if camera.get(key) is not None and camera[key] <= 0:
+            raise ValueError(f"camera.{key} must be positive when set")
+    limits = camera.get("frame_duration_limits_us")
+    if limits is not None and (
+        not isinstance(limits, list) or len(limits) != 2
+        or any(not isinstance(v, int) or v <= 0 for v in limits)
+        or limits[0] > limits[1]
+    ):
+        raise ValueError("camera.frame_duration_limits_us is invalid")
     if capture.get("maximum_pending_events", 0) < 1:
         raise ValueError("capture.maximum_pending_events must be positive")
     if motion.get("cooldown_seconds", -1) < 0:
