@@ -1,7 +1,9 @@
 import logging
 
 from trash_panda_observer.logging_setup import configure_logging
-from trash_panda_observer.system_info import storage_summary, system_summary
+from trash_panda_observer.system_info import (
+    git_revision, storage_summary, system_summary,
+)
 
 
 def test_rotating_log_is_created(tmp_path):
@@ -16,3 +18,14 @@ def test_rotating_log_is_created(tmp_path):
 def test_summaries_are_serializable(tmp_path):
     assert system_summary()["python"]
     assert storage_summary(tmp_path)["free"] > 0
+
+
+def test_capture_directory_size_is_reported(tmp_path):
+    capture = tmp_path / "captures/event"
+    capture.mkdir(parents=True)
+    (capture / "frame.jpg").write_bytes(b"1234")
+    assert storage_summary(tmp_path)["capture_bytes"] == 4
+
+
+def test_missing_git_repository_has_no_revision(tmp_path):
+    assert git_revision(tmp_path) is None
