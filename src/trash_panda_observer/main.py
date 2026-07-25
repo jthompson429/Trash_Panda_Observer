@@ -76,7 +76,11 @@ def main() -> int:
                 time.sleep(config["system"]["camera_retry_delay_seconds"])
     if camera is None:
         raise RuntimeError("camera initialization retries exhausted") from last_camera_error
-    log.info("Detected cameras %s", Picamera2.global_camera_info())
+    detected_cameras = Picamera2.global_camera_info()
+    log.info("Detected cameras %s", detected_cameras)
+    if detected_cameras:
+        config["camera"]["model"] = detected_cameras[0].get("Model")
+        config["camera"]["sensor"] = detected_cameras[0].get("Model")
     log.info("Available sensor modes %s", camera.sensor_modes)
     log.info(
         "Autofocus controls %s",

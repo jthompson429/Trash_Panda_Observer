@@ -30,5 +30,8 @@ def create_event_directory(base: Path, now: datetime) -> tuple[str, Path]:
 
 def atomic_json(path: Path, value: dict) -> None:
     temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(json.dumps(value, indent=2) + "\n")
-    os.replace(temporary, path)
+    try:
+        temporary.write_text(json.dumps(value, indent=2) + "\n")
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
