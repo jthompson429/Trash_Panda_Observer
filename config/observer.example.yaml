@@ -17,6 +17,15 @@ motion:
   background_alpha: 0.02
   region_of_interest: null
 
+capture:
+  frames_per_event: 12
+  interval_ms: 200
+  jpeg_quality: 92
+
+storage:
+  base_path: /home/pi/trash-panda-observer-data
+  minimum_free_space_gb: 5
+
 logging:
   level: INFO
   motion_debug_interval_seconds: 5

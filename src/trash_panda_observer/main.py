@@ -10,6 +10,7 @@ import yaml
 from libcamera import controls
 from picamera2 import Picamera2
 
+from .capture import capture_burst
 from .motion import MotionDetector
 
 
@@ -17,6 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--capture-test", action="store_true")
     parser.add_argument("--motion-debug", action="store_true")
     parser.add_argument("--max-runtime-minutes", type=float)
     return parser.parse_args()
@@ -24,8 +26,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not args.dry_run:
-        raise SystemExit("This milestone supports --dry-run only")
     config = yaml.safe_load(args.config.read_text())
     camera_cfg, motion_cfg = config["camera"], config["motion"]
     logging.basicConfig(
@@ -73,6 +73,13 @@ def main() -> int:
         "manual": controls.AfModeEnum.Manual,
     }
     camera.set_controls({"AfMode": af_modes[camera_cfg["autofocus_mode"]]})
+    if args.capture_test:
+        event_dir = capture_burst(camera, config)
+        camera.close()
+        print(event_dir)
+        return 0
+    if not args.dry_run:
+        raise SystemExit("Specify --dry-run or --capture-test")
     started = time.monotonic()
     warmup_until = started + motion_cfg["warmup_seconds"]
     debug_interval = config.get("logging", {}).get(
