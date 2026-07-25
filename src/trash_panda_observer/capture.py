@@ -36,6 +36,8 @@ def capture_burst(
             "architecture": platform.machine(),
         },
         "camera": {
+            "model": camera_cfg.get("model"),
+            "sensor": camera_cfg.get("sensor"),
             "capture_width": camera_cfg["capture_width"],
             "capture_height": camera_cfg["capture_height"],
             "analysis_width": camera_cfg["analysis_width"],

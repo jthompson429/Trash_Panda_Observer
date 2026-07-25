@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+import trash_panda_observer.storage as storage_module
 from trash_panda_observer.storage import (
     LowStorageError, atomic_json, create_event_directory, event_id,
     require_free_space,
@@ -33,6 +34,19 @@ def test_atomic_json_leaves_no_temporary_file(tmp_path):
     atomic_json(path, {"status": "complete"})
     assert json.loads(path.read_text())["status"] == "complete"
     assert not (tmp_path / ".event.json.tmp").exists()
+
+
+def test_atomic_json_cleans_temp_when_rename_fails(tmp_path, monkeypatch):
+    path = tmp_path / "event.json"
+
+    def fail_replace(_source, _destination):
+        raise OSError("injected rename failure")
+
+    monkeypatch.setattr(storage_module.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="injected rename failure"):
+        atomic_json(path, {"status": "incomplete"})
+    assert not (tmp_path / ".event.json.tmp").exists()
+    assert not path.exists()
 
 
 def test_impossible_free_space_threshold_fails(tmp_path):
