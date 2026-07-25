@@ -68,25 +68,39 @@ def capture_burst(
             tick = time.monotonic()
             final = event_dir / f"frame_{index:03d}.jpg"
             temporary = event_dir / f".{final.name}.tmp"
-            request = camera.capture_request()
             try:
-                image = request.make_image("main")
-                frame_metadata = request.get_metadata()
-                image.save(temporary, format="JPEG", quality=capture["jpeg_quality"])
-            finally:
-                request.release()
-            os.replace(temporary, final)
+                request = camera.capture_request()
+                try:
+                    image = request.make_image("main")
+                    frame_metadata = request.get_metadata()
+                    image.save(
+                        temporary, format="JPEG", quality=capture["jpeg_quality"])
+                finally:
+                    request.release()
+                os.replace(temporary, final)
+                metadata["capture"]["frames_saved"] += 1
+                success = True
+                error = None
+            except Exception as exc:
+                temporary.unlink(missing_ok=True)
+                frame_metadata = {}
+                success = False
+                error = f"{type(exc).__name__}: {exc}"
+                metadata["errors"].append(
+                    {"frame": index, "error": error})
             metadata["frames"].append({
                 "filename": final.name,
-                "timestamp": datetime.now().astimezone().isoformat(timespec="milliseconds"),
+                "timestamp": datetime.now().astimezone().isoformat(
+                    timespec="milliseconds"),
                 "metadata": {k: v for k, v in frame_metadata.items()
                              if isinstance(v, (str, int, float, bool))},
-                "write_success": True,
+                "write_success": success,
+                "error": error,
             })
-            metadata["capture"]["frames_saved"] += 1
             time.sleep(max(0, capture["interval_ms"] / 1000 -
                            (time.monotonic() - tick)))
-        metadata["status"] = "complete"
+        if metadata["capture"]["frames_saved"] == capture["frames_per_event"]:
+            metadata["status"] = "complete"
     except Exception as exc:
         metadata["errors"].append(str(exc))
         raise
