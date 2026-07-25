@@ -28,10 +28,22 @@ def create_event_directory(base: Path, now: datetime) -> tuple[str, Path]:
     return identifier, path
 
 
+def durable_replace(temporary: Path, final: Path) -> None:
+    """Commit a completed file and its directory entry to durable storage."""
+    with temporary.open("rb") as handle:
+        os.fsync(handle.fileno())
+    os.replace(temporary, final)
+    directory_fd = os.open(final.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 def atomic_json(path: Path, value: dict) -> None:
     temporary = path.with_name(f".{path.name}.tmp")
     try:
         temporary.write_text(json.dumps(value, indent=2) + "\n")
-        os.replace(temporary, path)
+        durable_replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)

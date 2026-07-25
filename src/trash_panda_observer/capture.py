@@ -1,13 +1,14 @@
 """High-resolution event burst capture."""
 
-import os
 import platform
 import shutil
 import time
 from datetime import datetime
 from pathlib import Path
 
-from .storage import atomic_json, create_event_directory, require_free_space
+from .storage import (
+    atomic_json, create_event_directory, durable_replace, require_free_space,
+)
 from .system_info import git_revision
 
 
@@ -84,7 +85,7 @@ def capture_burst(
                         temporary, format="JPEG", quality=capture["jpeg_quality"])
                 finally:
                     request.release()
-                os.replace(temporary, final)
+                durable_replace(temporary, final)
                 metadata["capture"]["frames_saved"] += 1
                 success = True
                 error = None

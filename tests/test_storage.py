@@ -49,6 +49,20 @@ def test_atomic_json_cleans_temp_when_rename_fails(tmp_path, monkeypatch):
     assert not path.exists()
 
 
+def test_durable_replace_syncs_file_and_directory(tmp_path, monkeypatch):
+    temporary = tmp_path / ".frame.jpg.tmp"
+    final = tmp_path / "frame.jpg"
+    temporary.write_bytes(b"jpeg")
+    synced = []
+
+    monkeypatch.setattr(storage_module.os, "fsync", synced.append)
+    storage_module.durable_replace(temporary, final)
+
+    assert final.read_bytes() == b"jpeg"
+    assert not temporary.exists()
+    assert len(synced) == 2
+
+
 def test_impossible_free_space_threshold_fails(tmp_path):
     with pytest.raises(LowStorageError):
         require_free_space(tmp_path, 10**9)
