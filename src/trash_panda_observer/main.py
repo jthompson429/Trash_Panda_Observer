@@ -89,7 +89,20 @@ def main() -> int:
         "auto": controls.AfModeEnum.Auto,
         "manual": controls.AfModeEnum.Manual,
     }
-    camera.set_controls({"AfMode": af_modes[camera_cfg["autofocus_mode"]]})
+    selected_controls = {
+        "AfMode": af_modes[camera_cfg["autofocus_mode"]],
+        "ExposureValue": camera_cfg.get("exposure_compensation", 0),
+    }
+    if camera_cfg.get("manual_lens_position") is not None:
+        selected_controls["LensPosition"] = camera_cfg["manual_lens_position"]
+    if camera_cfg.get("exposure_time_us") is not None:
+        selected_controls["ExposureTime"] = camera_cfg["exposure_time_us"]
+    if camera_cfg.get("analogue_gain") is not None:
+        selected_controls["AnalogueGain"] = camera_cfg["analogue_gain"]
+    if camera_cfg.get("frame_duration_limits_us") is not None:
+        selected_controls["FrameDurationLimits"] = tuple(
+            camera_cfg["frame_duration_limits_us"])
+    camera.set_controls(selected_controls)
     if args.capture_test:
         event_dir = capture_burst(camera, config)
         camera.close()
@@ -106,6 +119,9 @@ def main() -> int:
     mode = "observation" if args.observe else "dry-run"
     log.info("Starting %s motion analysis at %s FPS", mode, fps)
     camera.start()
+    if camera_cfg.get("autofocus_trigger_on_startup") and \
+            camera_cfg["autofocus_mode"] == "auto":
+        camera.autofocus_cycle()
     coordinator = EventCoordinator(
         config["capture"]["maximum_pending_events"],
         motion_cfg["cooldown_seconds"],

@@ -5,6 +5,12 @@ camera:
   capture_height: 1296
   analysis_fps: 12
   autofocus_mode: continuous
+  manual_lens_position: null
+  autofocus_trigger_on_startup: false
+  exposure_compensation: 0
+  exposure_time_us: null
+  analogue_gain: null
+  frame_duration_limits_us: null
 
 motion:
   pixel_threshold: 25
