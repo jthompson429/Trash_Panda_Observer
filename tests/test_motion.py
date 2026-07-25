@@ -49,6 +49,19 @@ def test_streak_can_be_reset_after_warmup():
     assert subject.process(moving).triggered
 
 
+def test_full_reset_discards_background_and_streak():
+    subject = detector()
+    background = np.zeros((100, 100), np.uint8)
+    moving = background.copy()
+    moving[20:60, 20:60] = 255
+    subject.process(background)
+    subject.process(moving)
+    subject.reset()
+    result = subject.process(moving)
+    assert result.total_area == 0
+    assert subject.streak == 0
+
+
 @pytest.mark.parametrize("roi", [[0, 0, 0, 1], [0.8, 0, 0.5, 1], [0, 0, 2, 1]])
 def test_invalid_roi_is_rejected(roi):
     subject = detector(roi=roi)
