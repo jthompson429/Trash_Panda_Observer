@@ -2,18 +2,21 @@
 
 import argparse
 import logging
+import queue
 import signal
 import threading
 import time
 from pathlib import Path
 
-import yaml
 from libcamera import controls
 from picamera2 import Picamera2
 
 from .capture import capture_burst
+from .config import load_config
 from .coordinator import EventCoordinator
+from .logging_setup import configure_logging
 from .motion import MotionDetector
+from .system_info import storage_summary, system_summary
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,13 +32,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    config = yaml.safe_load(args.config.read_text())
+    config = load_config(args.config)
     camera_cfg, motion_cfg = config["camera"], config["motion"]
-    logging.basicConfig(
-        level=config.get("logging", {}).get("level", "INFO"),
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
+    configure_logging(config["logging"])
     log = logging.getLogger("trash_panda_observer")
+    log.info("System summary %s", system_summary())
+    log.info("Storage summary %s", storage_summary(Path(config["storage"]["base_path"])))
     detector = MotionDetector(
         pixel_threshold=motion_cfg["pixel_threshold"],
         minimum_total_area=motion_cfg["minimum_total_area"],
@@ -54,7 +56,19 @@ def main() -> int:
 
     signal.signal(signal.SIGINT, request_stop)
     signal.signal(signal.SIGTERM, request_stop)
-    camera = Picamera2()
+    camera = None
+    last_camera_error = None
+    for attempt in range(1, config["system"]["camera_retry_count"] + 1):
+        try:
+            camera = Picamera2()
+            break
+        except Exception as exc:
+            last_camera_error = exc
+            log.exception("Camera initialization attempt %d failed", attempt)
+            if attempt < config["system"]["camera_retry_count"]:
+                time.sleep(config["system"]["camera_retry_delay_seconds"])
+    if camera is None:
+        raise RuntimeError("camera initialization retries exhausted") from last_camera_error
     fps = camera_cfg["analysis_fps"]
     configuration = camera.create_video_configuration(
         main={
@@ -96,6 +110,7 @@ def main() -> int:
         motion_cfg["cooldown_seconds"],
     )
     worker_stop = threading.Event()
+    worker_errors: queue.SimpleQueue[BaseException] = queue.SimpleQueue()
 
     def capture_worker() -> None:
         while not worker_stop.is_set() or not coordinator.events.empty():
@@ -111,6 +126,7 @@ def main() -> int:
                 log.info("Captured event path=%s trigger=%s", path, event)
             except Exception:
                 log.exception("Capture worker failed")
+                worker_errors.put(RuntimeError("capture worker failed"))
             finally:
                 coordinator.complete()
 
@@ -119,6 +135,8 @@ def main() -> int:
         worker.start()
     try:
         while not stop:
+            if not worker_errors.empty():
+                raise worker_errors.get()
             now = time.monotonic()
             if (
                 args.max_runtime_minutes is not None
