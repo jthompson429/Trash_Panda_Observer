@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 import pytest
 
 from trash_panda_observer.storage import (
-    atomic_json, create_event_directory, event_id, require_free_space,
+    LowStorageError, atomic_json, create_event_directory, event_id,
+    require_free_space,
 )
 
 
@@ -35,5 +36,5 @@ def test_atomic_json_leaves_no_temporary_file(tmp_path):
 
 
 def test_impossible_free_space_threshold_fails(tmp_path):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(LowStorageError):
         require_free_space(tmp_path, 10**9)
