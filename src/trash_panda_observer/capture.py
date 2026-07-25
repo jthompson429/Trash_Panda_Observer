@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .storage import atomic_json, create_event_directory, require_free_space
+from .system_info import git_revision
 
 
 def capture_burst(
@@ -51,7 +52,11 @@ def capture_burst(
             "cooldown_seconds": config["motion"]["cooldown_seconds"],
         },
         "storage": {"free_bytes_before": free_before},
-        "software": {"name": "Trash Panda Observer", "version": "0.1.0"},
+        "software": {
+            "name": "Trash Panda Observer",
+            "version": "0.1.0",
+            "git_commit": git_revision(Path(__file__).resolve().parents[2]),
+        },
         "environment": {
             "lighting_mode": config.get("environment", {}).get(
                 "lighting_mode", "unknown")

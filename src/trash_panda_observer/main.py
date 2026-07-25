@@ -117,6 +117,7 @@ def main() -> int:
         "motion_debug_interval_seconds", 5
     )
     next_debug = started
+    next_storage_summary = started + 86400
     mode = "observation" if args.observe else "dry-run"
     log.info("Starting %s motion analysis at %s FPS", mode, fps)
     camera.start()
@@ -158,6 +159,12 @@ def main() -> int:
             if not worker_errors.empty():
                 raise worker_errors.get()
             now = time.monotonic()
+            if now >= next_storage_summary:
+                log.info(
+                    "Daily storage summary %s",
+                    storage_summary(Path(config["storage"]["base_path"])),
+                )
+                next_storage_summary = now + 86400
             if (
                 args.max_runtime_minutes is not None
                 and now - started >= args.max_runtime_minutes * 60
