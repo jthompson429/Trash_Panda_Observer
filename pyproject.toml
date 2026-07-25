@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trash-panda-observer"
+version = "0.1.0"
+description = "Headless wildlife observation and dataset collection"
+requires-python = ">=3.11"
+
+[project.scripts]
+trash-panda-observer = "trash_panda_observer.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
