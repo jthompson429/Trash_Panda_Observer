@@ -8,7 +8,9 @@ from pathlib import Path
 from .storage import atomic_json, create_event_directory, require_free_space
 
 
-def capture_burst(camera, config: dict, *, warmup_seconds: float = 2) -> Path:
+def capture_burst(
+    camera, config: dict, *, warmup_seconds: float = 2, manage_camera: bool = True
+) -> Path:
     capture, storage = config["capture"], config["storage"]
     base = Path(storage["base_path"])
     require_free_space(base, storage["minimum_free_space_gb"])
@@ -23,7 +25,8 @@ def capture_burst(camera, config: dict, *, warmup_seconds: float = 2) -> Path:
                     "frames_saved": 0, "interval_ms": capture["interval_ms"]},
         "frames": [], "errors": [],
     }
-    camera.start()
+    if manage_camera:
+        camera.start()
     try:
         time.sleep(warmup_seconds)
         for index in range(capture["frames_per_event"]):
@@ -53,7 +56,8 @@ def capture_burst(camera, config: dict, *, warmup_seconds: float = 2) -> Path:
         metadata["errors"].append(str(exc))
         raise
     finally:
-        camera.stop()
+        if manage_camera:
+            camera.stop()
         metadata["capture_end_timestamp"] = datetime.now().astimezone().isoformat(
             timespec="milliseconds")
         atomic_json(event_dir / "event.json", metadata)
