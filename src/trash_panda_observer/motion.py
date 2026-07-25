@@ -49,6 +49,10 @@ class MotionDetector:
     def reset_streak(self) -> None:
         self.streak = 0
 
+    def reset(self) -> None:
+        self.background = None
+        self.streak = 0
+
     def _crop(self, frame: np.ndarray) -> np.ndarray:
         if self.roi is None:
             return frame

@@ -118,6 +118,7 @@ def main() -> int:
     )
     next_debug = started
     next_storage_summary = started + 86400
+    frame_failures = 0
     mode = "observation" if args.observe else "dry-run"
     log.info("Starting %s motion analysis at %s FPS", mode, fps)
     camera.start()
@@ -170,7 +171,30 @@ def main() -> int:
                 and now - started >= args.max_runtime_minutes * 60
             ):
                 break
-            yuv = camera.capture_array("lores")
+            try:
+                yuv = camera.capture_array("lores")
+                frame_failures = 0
+            except Exception:
+                frame_failures += 1
+                log.exception(
+                    "Analysis frame failed attempt=%d/%d",
+                    frame_failures, config["system"]["camera_retry_count"],
+                )
+                if frame_failures >= config["system"]["camera_retry_count"]:
+                    raise RuntimeError("runtime camera recovery exhausted")
+                if coordinator.active:
+                    time.sleep(config["system"]["camera_retry_delay_seconds"])
+                    continue
+                try:
+                    camera.stop()
+                    time.sleep(config["system"]["camera_retry_delay_seconds"])
+                    camera.start()
+                    detector.reset()
+                    warmup_until = time.monotonic() + motion_cfg["warmup_seconds"]
+                    log.info("Camera pipeline restarted after frame failure")
+                except Exception:
+                    log.exception("Camera pipeline restart failed")
+                continue
             grayscale = yuv[: camera_cfg["analysis_height"], :]
             result = detector.process(grayscale)
             if now < warmup_until:
