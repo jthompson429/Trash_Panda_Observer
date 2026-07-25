@@ -4,18 +4,35 @@ import os
 import platform
 import shutil
 import subprocess
+from importlib import metadata
 from pathlib import Path
 
 
 def system_summary() -> dict:
     model_path = Path("/proc/device-tree/model")
     model = model_path.read_text().rstrip("\0") if model_path.exists() else "unknown"
+    os_release = {}
+    release_path = Path("/etc/os-release")
+    if release_path.exists():
+        for line in release_path.read_text().splitlines():
+            if "=" in line:
+                key, value = line.split("=", 1)
+                os_release[key] = value.strip('"')
+    packages = {}
+    for name in ("picamera2", "numpy", "PyYAML", "psutil"):
+        try:
+            packages[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            packages[name] = None
     return {
         "hostname": platform.node(),
         "model": model,
+        "os": os_release.get("PRETTY_NAME", platform.platform()),
+        "os_codename": os_release.get("VERSION_CODENAME"),
         "architecture": platform.machine(),
         "kernel": platform.release(),
         "python": platform.python_version(),
+        "packages": packages,
     }
 
 

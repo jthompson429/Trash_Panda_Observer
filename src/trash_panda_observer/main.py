@@ -76,6 +76,13 @@ def main() -> int:
                 time.sleep(config["system"]["camera_retry_delay_seconds"])
     if camera is None:
         raise RuntimeError("camera initialization retries exhausted") from last_camera_error
+    log.info("Detected cameras %s", Picamera2.global_camera_info())
+    log.info("Available sensor modes %s", camera.sensor_modes)
+    log.info(
+        "Autofocus controls %s",
+        {name: camera.camera_controls.get(name, "unsupported") for name in (
+            "AfMode", "AfTrigger", "AfRange", "AfSpeed", "LensPosition")},
+    )
     fps = camera_cfg["analysis_fps"]
     configuration = camera.create_video_configuration(
         main={
@@ -91,6 +98,7 @@ def main() -> int:
         queue=False,
     )
     camera.configure(configuration)
+    log.info("Selected camera configuration %s", configuration)
     af_modes = {
         "continuous": controls.AfModeEnum.Continuous,
         "auto": controls.AfModeEnum.Auto,
